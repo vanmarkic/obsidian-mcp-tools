@@ -41,7 +41,21 @@ describe("Path normalization for symlink resolution", () => {
       normalized.push(part);
     }
 
-    return path.join(...normalized);
+    // Handle special case: if normalized array is empty or only contains empty string (root)
+    if (normalized.length === 0) {
+      return path.sep;
+    }
+    if (normalized.length === 1 && normalized[0] === "") {
+      return path.sep;
+    }
+
+    // Preserve leading slash for absolute paths
+    const result = path.join(...normalized);
+    if (normalized[0] === "" && !result.startsWith(path.sep)) {
+      return path.sep + result;
+    }
+
+    return result;
   }
 
   test("removes simple duplicate /home/user segment", () => {
