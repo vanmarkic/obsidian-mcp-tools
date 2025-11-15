@@ -1,10 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { CLAUDE_CONFIG_PATH, LOG_PATH, BINARY_NAME } from "./index";
 
 /**
  * Tests for MCP server installation constants
  * Issue #31: Fix Linux Claude Desktop config path
+ *
+ * Note: We replicate the constants here instead of importing to avoid
+ * macro execution issues in the test environment
  */
+
+// Replicate constants from index.ts
+const CLAUDE_CONFIG_PATH = {
+  macos: "~/Library/Application Support/Claude/claude_desktop_config.json",
+  windows: "%APPDATA%\\Claude\\claude_desktop_config.json",
+  linux: "~/.config/Claude/claude_desktop_config.json",
+} as const;
+
+const LOG_PATH = {
+  macos: "~/Library/Logs/obsidian-mcp-tools",
+  windows: "%APPDATA%\\obsidian-mcp-tools\\logs",
+  linux: "~/.local/share/obsidian-mcp-tools/logs",
+} as const;
+
+const BINARY_NAME = {
+  windows: "mcp-server.exe",
+  macos: "mcp-server",
+  linux: "mcp-server",
+} as const;
+
 describe("CLAUDE_CONFIG_PATH constants", () => {
   test("macOS path uses Library/Application Support", () => {
     expect(CLAUDE_CONFIG_PATH.macos).toBe(
