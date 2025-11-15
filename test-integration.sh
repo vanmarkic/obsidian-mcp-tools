@@ -23,8 +23,8 @@ if [ ! -f "$API_CONFIG" ]; then
     exit 1
 fi
 
-API_KEY=$(grep -o '"apiKey":"[^"]*' "$API_CONFIG" | cut -d'"' -f4)
-PORT=$(grep -o '"port":[0-9]*' "$API_CONFIG" | cut -d':' -f2)
+API_KEY=$(grep 'apiKey' "$API_CONFIG" | cut -d'"' -f4)
+PORT=$(grep -E '^\s*"port"' "$API_CONFIG" | grep -oE '[0-9]+')
 BASE_URL="https://127.0.0.1:${PORT}"
 
 # Test counters
@@ -149,14 +149,16 @@ echo "=== File Operations ==="
 TEST_FILE="test-integration-$(date +%s).md"
 TEST_CONTENT="# Integration Test\n\nThis is a test file created by automated integration tests."
 
-run_test "Create test file" \
-    "curl -k -s -X PUT -H 'Authorization: Bearer $API_KEY' -H 'Content-Type: text/markdown' -d '$TEST_CONTENT' '$BASE_URL/vault/$TEST_FILE' | grep -q 'OK'"
+run_test_with_output "Create test file" \
+    "curl -k -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer $API_KEY' -H 'Content-Type: text/markdown' -d '$TEST_CONTENT' '$BASE_URL/vault/$TEST_FILE'" \
+    "20[04]"
 
 run_test "Read test file" \
     "curl -k -s -H 'Authorization: Bearer $API_KEY' '$BASE_URL/vault/$TEST_FILE' | grep -q 'Integration Test'"
 
-run_test "Delete test file" \
-    "curl -k -s -X DELETE -H 'Authorization: Bearer $API_KEY' '$BASE_URL/vault/$TEST_FILE' | grep -q 'OK'"
+run_test_with_output "Delete test file" \
+    "curl -k -s -o /dev/null -w '%{http_code}' -X DELETE -H 'Authorization: Bearer $API_KEY' '$BASE_URL/vault/$TEST_FILE'" \
+    "20[04]"
 
 echo ""
 
