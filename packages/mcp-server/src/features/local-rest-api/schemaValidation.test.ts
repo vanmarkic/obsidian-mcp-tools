@@ -92,24 +92,31 @@ describe("Comparison: Record<string, unknown> vs {} for no-argument tools", () =
     const withProperties = recordSchema({ foo: "bar", baz: 123 });
     expect(withProperties instanceof type.errors).toBe(false);
 
-    // But {} schema correctly rejects it
+    // Note: In ArkType, type({}) also accepts objects with additional properties
+    // because {} means "an object" not "an object with exactly no properties"
+    // For MCP tool schemas, this is actually the desired behavior for extensibility
     const emptyObjectSchema = type({});
-    const shouldReject = emptyObjectSchema({ foo: "bar" });
+    const withExtraProps = emptyObjectSchema({ foo: "bar" });
 
-    // The empty object schema should reject objects with properties
-    expect(shouldReject instanceof type.errors).toBe(true);
+    // Both patterns accept objects (the issue was that Record<string, unknown>
+    // was not being recognized properly by some MCP clients)
+    expect(withExtraProps instanceof type.errors).toBe(false);
   });
 
-  test("empty object {} only accepts objects with no properties", () => {
+  test("empty object {} accepts objects regardless of properties", () => {
     const schema = type({});
 
-    // Should accept empty object
+    // Accepts empty object
     const empty = schema({});
     expect(empty instanceof type.errors).toBe(false);
 
-    // Should reject object with properties
+    // Also accepts object with properties (in ArkType, {} means "object type")
     const withProps = schema({ foo: "bar" });
-    expect(withProps instanceof type.errors).toBe(true);
+    expect(withProps instanceof type.errors).toBe(false);
+
+    // But rejects non-objects
+    const notObject = schema("not an object");
+    expect(notObject instanceof type.errors).toBe(true);
   });
 });
 
@@ -138,18 +145,23 @@ describe("Tool registration with empty arguments schema", () => {
 
   test("multiple tools with empty arguments schemas", () => {
     const tools = [
-      type({
-        name: '"get_server_info"',
-        arguments: {},
-      }),
-      type({
-        name: '"delete_active_file"',
-        arguments: {},
-      }),
+      {
+        schema: type({
+          name: '"get_server_info"',
+          arguments: {},
+        }),
+        name: "get_server_info",
+      },
+      {
+        schema: type({
+          name: '"delete_active_file"',
+          arguments: {},
+        }),
+        name: "delete_active_file",
+      },
     ];
 
-    tools.forEach((schema) => {
-      const toolName = schema.infer.name;
+    tools.forEach(({ schema, name: toolName }) => {
       const result = schema({
         name: toolName,
         arguments: {},
